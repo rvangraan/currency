@@ -7,9 +7,16 @@
 
 -module(currency).
 
+-export([less_than/2,
+         equal/2,
+         add/2,
+         sub/2,
+         greater_than/2]).
+
 -include("../include/currency.hrl").
 -include_lib("decimal/include/decimal.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
 
 %%================================================================================================
 
@@ -47,7 +54,7 @@ greater_than_test_() ->
 		     #currency{currency=1,decimals=2,major=1,minor=1},
 		     #currency{currency=2,decimals=2,major=1,minor=0}))
      ].
-
+ 
 
 %%================================================================================================
 
@@ -113,10 +120,41 @@ from_decimal(#decimal{}) ->
 
 %%================================================================================================
 
-
 from_decimal_test_() ->
     [
      ?_assertThrow(badarg,from_decimal(#decimal{unit=scale,scale=2,value=1,fraction=0})),
      ?_assertMatch(#currency{currency=123,decimals=2,major=1,minor=0},
 		   from_decimal(#decimal{unit={currency,123},scale=2,value=1,fraction=0}))
     ].
+
+%%================================================================================================
+sub(Amount1 = #currency{},Amount2 = #currency{}) ->
+    Dec1 = to_decimal(Amount1),
+    Dec2 = to_decimal(Amount2),
+    from_decimal(decimal:sub(Dec1,Dec2)).
+
+sub_test_() ->
+    [?_assertMatch(#currency{decimals=2,major=7,minor=50},
+		   sub(
+		     #currency{decimals=2,major=10,minor=0}, 
+		     #currency{decimals=2,major=2,minor=50})),
+     ?_assertExit(badarg,
+		   sub(
+		     #currency{currency=840, decimals=2,major=10,minor=0}, 
+		     #currency{currency=826, decimals=2,major=2,minor=50}))
+    ].
+
+%%================================================================================================
+
+add(Amount1 = #currency{},Amount2 = #currency{}) ->
+    Dec1 = to_decimal(Amount1),
+    Dec2 = to_decimal(Amount2),
+    from_decimal(decimal:add(Dec1,Dec2)).
+
+add_test_() ->
+    [?_assertMatch(#currency{decimals=2,major=12,minor=50},
+		   add(
+		     #currency{decimals=2,major=10,minor=0},
+		     #currency{decimals=2,major=2,minor=50}))].
+
+%%================================================================================================
