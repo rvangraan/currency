@@ -11,7 +11,8 @@
          equal/2,
          add/2,
          sub/2,
-         greater_than/2]).
+         greater_than/2,
+	 from_string/1]).
 
 -include("../include/currency.hrl").
 -include_lib("decimal/include/decimal.hrl").
@@ -158,3 +159,62 @@ add_test_() ->
 		     #currency{decimals=2,major=2,minor=50}))].
 
 %%================================================================================================
+
+from_string(String) when is_list(String) ->
+    N = count_decimal_points(String),
+    case {valid_decimal_digits(String),N} of
+	{true,0} ->
+	    from_string(N,String);
+	{true,1} ->
+	    from_string(N,String);
+	{_,_} ->
+	    exit(badarg)
+    end.
+from_string(0,IntegerString) ->
+    #currency{decimals=0,
+	      major = list_to_integer(IntegerString),
+	      minor = 0};
+from_string(1,[$.|Decimals]) ->
+    #currency{decimals=length(Decimals),
+	      major = 0,
+	      minor = list_to_integer(Decimals)};
+from_string(1,String) when is_list(String) ->
+    case string:tokens(String,".") of
+	[IntegerString,FractionString] ->
+	    #currency{decimals=length(FractionString),
+		      major = list_to_integer(IntegerString),
+		      minor = list_to_integer(FractionString)};
+	[IntegerString] ->
+	    #currency{decimals=0,
+		      major = list_to_integer(IntegerString),
+		      minor = 0}
+    end.
+
+
+count_decimal_points(String) when is_list(String) ->
+     lists:foldl(fun($., Count) -> Count + 1;
+		    (_C, Count) -> Count end, 0, 
+		 String).
+
+valid_decimal_digits(String) ->
+    lists:all(fun($.) -> true;
+		 (Digit) when Digit >= $0, Digit =< $9 -> true;
+		 (_Any) -> false
+	      end, String).
+
+
+
+from_string_test_() ->
+    [?_assertMatch(#currency{decimals=2,major=12,minor=50},
+		   from_string("12.50")),
+     ?_assertMatch(#currency{decimals=0,major=12,minor=0},
+		   from_string("12.")),
+     ?_assertMatch(#currency{decimals=0,major=12,minor=0},
+		   from_string("12")),
+     ?_assertMatch(#currency{decimals=1,major=12,minor=0},
+		   from_string("12.0")),
+     ?_assertMatch(#currency{decimals=1,major=0,minor=0},
+		   from_string(".0")),
+     ?_assertMatch(#currency{decimals=2,major=0,minor=10},
+		   from_string(".10"))
+		  ].
